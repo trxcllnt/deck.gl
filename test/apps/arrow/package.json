@@ -1,0 +1,23 @@
+{
+  "name": "pure-js-without-map",
+  "version": "0.0.0",
+  "license": "MIT",
+  "scripts": {
+    "start": "webpack-dev-server --progress --hot --open",
+    "start-local": "webpack-dev-server --env.local --progress --hot --open",
+    "build": "NODE_ENV=production webpack -p"
+  },
+  "dependencies": {
+    "@deck.gl/core": "^6.2.0",
+    "@deck.gl/layers": "^6.2.0",
+    "apache-arrow": "https://github.com/graphistry/arrow.git#348d735ef44f68199e7e6b66778a5bbda5f8d99c"
+  },
+  "devDependencies": {
+    "buble": "^0.19.3",
+    "buble-loader": "^0.5.0",
+    "html-webpack-plugin": "^3.0.7",
+    "webpack": "^4.20.2",
+    "webpack-cli": "^3.1.2",
+    "webpack-dev-server": "^3.1.1"
+  }
+}
