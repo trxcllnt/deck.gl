@@ -164,23 +164,7 @@ export default class ArrowGraphLayer extends CompositeLayer {
     }
 
     if (nodesUpdated) {
-      // luma.gl Texture.setImageData bug: internalFormat and format are not the same in WebGL2
-      // https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/texImage2D
-      const {gl} = this.context;
-      gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, nodePositionsBuffer.handle);
-      gl.bindTexture(GL.TEXTURE_2D, nodePositionsTexture.handle);
-      gl.texImage2D(
-        GL.TEXTURE_2D,
-        0,
-        GL.RG32F,
-        nodePositionsTexture.width,
-        nodePositionsTexture.height,
-        0,
-        GL.RG,
-        GL.FLOAT,
-        0
-      );
-      gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
+      nodePositionsTexture.setImageData({data: nodePositionsBuffer});
     }
 
     if ((nodesUpdated || edgesUpdated) && loadedEdgeCount && loadedNodeCount) {

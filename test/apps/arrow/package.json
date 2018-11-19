@@ -1,5 +1,5 @@
 {
-  "name": "pure-js-without-map",
+  "name": "arrow-graph",
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
@@ -8,8 +8,8 @@
     "build": "NODE_ENV=production webpack -p"
   },
   "dependencies": {
-    "@deck.gl/core": "^6.2.0",
-    "@deck.gl/layers": "^6.2.0",
+    "@deck.gl/core": "^6.3.0",
+    "@deck.gl/layers": "^6.3.0",
     "apache-arrow": "https://github.com/graphistry/arrow.git#348d735ef44f68199e7e6b66778a5bbda5f8d99c"
   },
   "devDependencies": {
