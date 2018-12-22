@@ -19,6 +19,7 @@ const deck = new Deck({
   onViewStateChange: ({viewState}) => deck.setProps({viewState})
 });
 
+let setBB = false;
 let totalNodeCount = 0;
 let totalEdgeCount = 0;
 const nodeUpdates = [];
@@ -28,8 +29,11 @@ const DATA_URL =
 
 loadFromFile(`${DATA_URL}/biogrid-nodes.arrow`, ({metadata, length, ...columns}) => {
   if (totalNodeCount === 0) {
-    zoomTo(JSON.parse(metadata.get('globalBoundBox')));
     totalNodeCount = Number(metadata.get('length'));
+  }
+
+  if (deck.width > 0 && deck.height > 0 && !setBB && (setBB = true)) {
+    zoomTo(JSON.parse(metadata.get('globalBoundBox')));
   }
 
   nodeUpdates.push({length, ...columns});

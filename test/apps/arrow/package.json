@@ -8,9 +8,12 @@
     "build": "NODE_ENV=production webpack -p"
   },
   "dependencies": {
+    "@mattiasbuelens/web-streams-adapter": "0.1.0-alpha.2",
+    "@mattiasbuelens/web-streams-polyfill": "0.2.0",
     "@deck.gl/core": "^6.3.0",
     "@deck.gl/layers": "^6.3.0",
-    "apache-arrow": "https://github.com/graphistry/arrow.git#348d735ef44f68199e7e6b66778a5bbda5f8d99c"
+    "apache-arrow": "https://github.com/graphistry/arrow.git#1ac1444c53f0794710ab52a5061e635f7cc9146b",
+    "fetch-readablestream": "0.2.0"
   },
   "devDependencies": {
     "buble": "^0.19.3",
