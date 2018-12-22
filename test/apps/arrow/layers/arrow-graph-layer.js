@@ -206,7 +206,7 @@ export default class ArrowGraphLayer extends CompositeLayer {
             instanceTargetColors: edgeColorsBuffer,
             instancePickingColors: edgeColorsBuffer, // TODO
             pickable: false,
-            opacity: 0.2
+            opacity: 0.01
           })
         ),
       loadedNodeCount &&
@@ -219,7 +219,8 @@ export default class ArrowGraphLayer extends CompositeLayer {
             instancePositions: nodePositionsBuffer,
             instancePickingColors: nodeColorsBuffer, // TODO
             pickable: false,
-            radiusScale: 1
+            radiusScale: 1,
+            opacity: 0.05
           })
         )
     ];

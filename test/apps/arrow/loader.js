@@ -1,44 +1,48 @@
-/* global fetch, setTimeout */
-import {Table} from 'apache-arrow/Arrow.es5.min.js';
+/* global window, fetch, ReadableStream */
 
-/* Simulates incremental loading */
-export function loadFromFile(path, onUpdate) {
-  fetch(path)
-    .then(resp => resp.arrayBuffer())
-    .then(arraybuffer => {
-      const buffer = new Uint8Array(arraybuffer);
-      const table = Table.from(buffer);
-      // console.log(table.toString());
-
-      return new Promise(resolve => {
-        // Send a batch every 50ms
-        iterateAsync(
-          table.batches,
-          batch => {
-            const values = {
-              metadata: batch.schema.metadata,
-              length: batch.length
-            };
-            batch.schema.fields.forEach(({name}, index) => {
-              values[name] = batch.getChildAt(index).toArray();
-            });
-            onUpdate(values);
-          },
-          resolve,
-          50
-        );
-      });
-    });
+// Polyfill ReadableStream for FireFox
+if (typeof ReadableStream === 'undefined') {
+  const mozFetch = require('fetch-readablestream');
+  const streams = require('@mattiasbuelens/web-streams-polyfill');
+  const {createReadableStreamWrapper} = require('@mattiasbuelens/web-streams-adapter');
+  const toPolyfilledReadableStream = createReadableStreamWrapper(streams.ReadableStream);
+  window.fetch = async function fetch(...args) {
+    const res = await mozFetch(...args);
+    res.body = toPolyfilledReadableStream(res.body);
+    res.bodyUsed = false;
+    return res;
+  };
 }
 
-function iterateAsync(array, onResult, onDone, delay, index = 0) {
-  if (index >= array.length) {
-    onDone();
-    return;
-  }
-  onResult(array[index], index);
+import {RecordBatchReader} from 'apache-arrow/Arrow.es5.min.js';
 
-  setTimeout(() => {
-    iterateAsync(array, onResult, onDone, delay, index + 1);
-  }, delay);
+export function loadFromFile(path, onUpdate) {
+  RecordBatchReader.from(fetch(path, {credentials: 'omit'}))
+    // This isn't strictly necessary at the moment, but depending on usage
+    // patterns and feedback we may change Arrow not to auto-open the
+    // RecordBatchReader, so being explicit here is safe
+    .then(reader => reader.open())
+    .then(loadBatch)
+    .then(reader => reader.cancel());
+
+  function loadBatch(reader) {
+    return reader.next().then(result => {
+      if (!result.done) {
+        yieldBatch(result.value);
+        return loadBatch(reader);
+      }
+      return reader;
+    });
+  }
+
+  function yieldBatch(batch) {
+    const values = {
+      metadata: batch.schema.metadata,
+      length: batch.length
+    };
+    batch.schema.fields.forEach(({name}, index) => {
+      values[name] = batch.getChildAt(index).toArray();
+    });
+    onUpdate(values);
+  }
 }
