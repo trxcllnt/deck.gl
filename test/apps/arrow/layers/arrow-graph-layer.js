@@ -12,7 +12,8 @@ const defaultProps = {
   totalNodeCount: 0,
   totalEdgeCount: 0,
   nodeUpdates: [],
-  edgeUpdates: []
+  edgeUpdates: [],
+  drawEdges: true
 };
 
 const TEXTURE_WIDTH = 256;
@@ -227,6 +228,7 @@ export default class ArrowGraphLayer extends CompositeLayer {
         new EdgeLayer(
           this.getSubLayerProps({
             id: 'edges',
+            visible: this.props.drawEdges,
             numInstances: resolvedEdgeCount,
             instanceSourcePositions: edgeSourcePositionsBuffer,
             instanceTargetPositions: edgeTargetPositionsBuffer,
