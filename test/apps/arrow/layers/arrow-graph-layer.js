@@ -72,6 +72,8 @@ export default class ArrowGraphLayer extends CompositeLayer {
       }),
 
       // Transform feedback buffers
+      resolvedEdgeCount: 0,
+      pendingEdgeCount: 0,
       nodePositionsTexture: new Texture2D(gl, {
         format: GL.RG32F,
         type: GL.FLOAT,
@@ -86,6 +88,14 @@ export default class ArrowGraphLayer extends CompositeLayer {
       edgeIdsBuffer: new Buffer(gl, {
         accessor: {type: GL.UNSIGNED_INT, size: 2},
         byteLength: 1
+      }),
+      edgeSourcePositionsBufferTemp: new Buffer(gl, {
+        accessor: edgeLayerAttributes.instanceSourcePositions,
+        byteLength: 1
+      }),
+      edgeTargetPositionsBufferTemp: new Buffer(gl, {
+        accessor: edgeLayerAttributes.instanceTargetPositions,
+        byteLength: 1
       })
     });
 
@@ -96,8 +106,8 @@ export default class ArrowGraphLayer extends CompositeLayer {
           instanceIds: this.state.edgeIdsBuffer
         },
         feedbackBuffers: {
-          sourcePositions: this.state.edgeSourcePositionsBuffer,
-          targetPositions: this.state.edgeTargetPositionsBuffer
+          sourcePositions: this.state.edgeSourcePositionsBufferTemp,
+          targetPositions: this.state.edgeTargetPositionsBufferTemp
         },
         vs: edgePositionsVS,
         varyings: ['sourcePositions', 'targetPositions'],
@@ -117,10 +127,12 @@ export default class ArrowGraphLayer extends CompositeLayer {
       edgePositionsTransform,
       edgeSourcePositionsBuffer,
       edgeTargetPositionsBuffer,
+      edgeSourcePositionsBufferTemp,
+      edgeTargetPositionsBufferTemp,
       edgeColorsBuffer,
       edgeIdsBuffer
     } = this.state;
-    let {loadedNodeCount, loadedEdgeCount} = this.state;
+    let {loadedNodeCount, loadedEdgeCount, pendingEdgeCount, resolvedEdgeCount} = this.state;
 
     // Resize node layer buffers
     if (totalNodeCount && totalNodeCount !== oldProps.totalNodeCount) {
@@ -144,7 +156,6 @@ export default class ArrowGraphLayer extends CompositeLayer {
     }
 
     const nodesUpdated = nodeUpdates.length > 0;
-    const edgesUpdated = edgeUpdates.length > 0;
 
     // Apply node data updates
     while (nodeUpdates.length) {
@@ -159,33 +170,50 @@ export default class ArrowGraphLayer extends CompositeLayer {
     while (edgeUpdates.length) {
       const {length, edgeColors, logicalEdges} = edgeUpdates.shift();
       updatePartialBuffer(edgeColorsBuffer, edgeColors, loadedEdgeCount);
-      updatePartialBuffer(edgeIdsBuffer, logicalEdges, loadedEdgeCount);
+      updatePartialBuffer(edgeIdsBuffer, logicalEdges, pendingEdgeCount);
       loadedEdgeCount += length;
+      pendingEdgeCount += length;
     }
 
-    if (nodesUpdated) {
+    if (nodesUpdated && loadedNodeCount === totalNodeCount) {
+      // First time all nodes are loaded
       nodePositionsTexture.setImageData({data: nodePositionsBuffer});
     }
 
-    if ((nodesUpdated || edgesUpdated) && loadedEdgeCount && loadedNodeCount) {
+    if (loadedNodeCount === totalNodeCount && pendingEdgeCount) {
       // Update edge position buffers
-      edgePositionsTransform.update({elementCount: loadedEdgeCount});
+      resizeBuffer(edgeSourcePositionsBufferTemp, pendingEdgeCount);
+      resizeBuffer(edgeTargetPositionsBufferTemp, pendingEdgeCount);
+      edgePositionsTransform.update({elementCount: pendingEdgeCount});
       edgePositionsTransform.run({
         uniforms: {loadedNodeCount, width: TEXTURE_WIDTH, nodePositions: nodePositionsTexture}
       });
+      edgeSourcePositionsBuffer.copyData({
+        sourceBuffer: edgeSourcePositionsBufferTemp,
+        writeOffset: resolvedEdgeCount * 4 * 3,
+        size: pendingEdgeCount * 4 * 3
+      });
+      edgeTargetPositionsBuffer.copyData({
+        sourceBuffer: edgeTargetPositionsBufferTemp,
+        writeOffset: resolvedEdgeCount * 4 * 3,
+        size: pendingEdgeCount * 4 * 3
+      });
+
+      resolvedEdgeCount += pendingEdgeCount;
+      pendingEdgeCount = 0;
     }
 
     // console.log(
     //   `Nodes: ${loadedNodeCount}/${totalNodeCount} Edges: ${loadedEdgeCount}/${totalEdgeCount}`
     // );
-    this.setState({loadedNodeCount, loadedEdgeCount});
+    this.setState({loadedNodeCount, loadedEdgeCount, resolvedEdgeCount, pendingEdgeCount});
   }
   /* eslint-enable max-statements */
 
   renderLayers() {
     const {
       loadedNodeCount,
-      loadedEdgeCount,
+      resolvedEdgeCount,
       nodeColorsBuffer,
       nodeRadiusBuffer,
       nodePositionsBuffer,
@@ -195,11 +223,11 @@ export default class ArrowGraphLayer extends CompositeLayer {
     } = this.state;
 
     return [
-      loadedEdgeCount &&
+      resolvedEdgeCount &&
         new EdgeLayer(
           this.getSubLayerProps({
             id: 'edges',
-            numInstances: loadedEdgeCount,
+            numInstances: resolvedEdgeCount,
             instanceSourcePositions: edgeSourcePositionsBuffer,
             instanceTargetPositions: edgeTargetPositionsBuffer,
             instanceSourceColors: edgeColorsBuffer,
