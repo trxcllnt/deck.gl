@@ -1,4 +1,4 @@
-/* global document */
+/* global document, setTimeout */
 import {Deck, OrthographicView, COORDINATE_SYSTEM} from '@deck.gl/core';
 
 import ArrowGraphLayer from './layers/arrow-graph-layer';
@@ -16,10 +16,15 @@ const deck = new Deck({
   },
   // debug: true,
   views: [new OrthographicView({controller: {minZoom: 0, maxZoom: Infinity}})],
-  onViewStateChange: ({viewState}) => deck.setProps({viewState})
+  onViewStateChange: ({viewState}) => {
+    deck.setProps({viewState});
+    redraw({drawEdges: false});
+    setTimeout(() => redraw({drawEdges: true}), 50);
+  }
 });
 
 let setBB = false;
+let graphVersion = 0;
 let totalNodeCount = 0;
 let totalEdgeCount = 0;
 const nodeUpdates = [];
@@ -37,6 +42,7 @@ loadFromFile(`${DATA_URL}/biogrid-nodes.arrow`, ({metadata, length, ...columns})
   }
 
   nodeUpdates.push({length, ...columns});
+  graphVersion++;
   redraw();
 });
 
@@ -46,21 +52,25 @@ loadFromFile(`${DATA_URL}/biogrid-edges.arrow`, ({metadata, length, ...columns})
   }
 
   edgeUpdates.push({length, ...columns});
+  graphVersion++;
   redraw();
 });
 
-function redraw() {
+function redraw(props) {
   deck.setProps({
     layers: [
-      new ArrowGraphLayer({
-        id: 'graph',
-        coordinateSystem: COORDINATE_SYSTEM.IDENTITY,
-        totalNodeCount,
-        totalEdgeCount,
-        nodeUpdates,
-        edgeUpdates,
-        version: Date.now()
-      })
+      new ArrowGraphLayer(
+        {
+          id: 'graph',
+          coordinateSystem: COORDINATE_SYSTEM.IDENTITY,
+          totalNodeCount,
+          totalEdgeCount,
+          nodeUpdates,
+          edgeUpdates,
+          version: graphVersion
+        },
+        props
+      )
     ]
   });
 }
